@@ -12,6 +12,6 @@ jobs:
   aws-deploy:
     uses: "./.github/workflows/aws-deploy.yaml"
     with:
-      role-to-assume: "arn:aws:iam::XXXXXXXX:role/sagebase-github-oidc-myapp-infra"
+      role-to-assume: "arn:aws:iam::045984464920:role/sagebase-github-oidc-bixarena-infra"
       role-session-name: ${{ github.repository_owner }}-${{ github.event.repository.name }}-${{ github.run_id }}
       environment: stage
