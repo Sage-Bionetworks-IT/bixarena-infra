@@ -30,7 +30,7 @@ match environment:
         environment_variables = {
             "VPC_CIDR": "10.254.172.0/24",
             "FQDN": "dev.mydomain.io",
-            "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:607346494281:certificate/e8093404-7db1-4042-90d0-01eb5bde1ffc",
+            "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:864020296088:certificate/2d1a68ac-8601-4877-8b97-6e58d0ebf532",
             "TAGS": {"CostCenter": "NO PROGRAM / 000000"},
         }
     case _:
