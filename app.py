@@ -14,21 +14,21 @@ environment = environ.get("ENV")
 match environment:
     case "prod":
         environment_variables = {
-            "VPC_CIDR": "10.254.174.0/24",
+            "VPC_CIDR": "10.254.122.0/24",
             "FQDN": "prod.mydomain.io",
             "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:XXXXXXXXX:certificate/69b3ba97-b382-4648-8f94-a250b77b4994",
             "TAGS": {"CostCenter": "NO PROGRAM / 000000"},
         }
     case "stage":
         environment_variables = {
-            "VPC_CIDR": "10.254.173.0/24",
+            "VPC_CIDR": "10.254.121.0/24",
             "FQDN": "stage.mydomain.io",
             "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:XXXXXXXXXX:certificate/69b3ba97-b382-4648-8f94-a250b77b4994",
             "TAGS": {"CostCenter": "NO PROGRAM / 000000"},
         }
     case "dev":
         environment_variables = {
-            "VPC_CIDR": "10.254.172.0/24",
+            "VPC_CIDR": "10.254.120.0/24",
             "FQDN": "dev.mydomain.io",
             "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:864020296088:certificate/2d1a68ac-8601-4877-8b97-6e58d0ebf532",
             "TAGS": {"CostCenter": "NO PROGRAM / 000000"},
