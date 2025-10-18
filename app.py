@@ -16,21 +16,21 @@ match environment:
         environment_variables = {
             "VPC_CIDR": "10.254.122.0/24",
             "FQDN": "prod.bixarena.io",
-            "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:XXXXXXXXX:certificate/69b3ba97-b382-4648-8f94-a250b77b4994",
+            "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:045984464920:certificate/2d81bfca-89ea-42cb-8e78-ea9c3d1f6919",
             "TAGS": {"CostCenter": "NO PROGRAM / 000000"},
         }
     case "stage":
         environment_variables = {
             "VPC_CIDR": "10.254.121.0/24",
             "FQDN": "stage.bixarena.io",
-            "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:XXXXXXXXXX:certificate/69b3ba97-b382-4648-8f94-a250b77b4994",
+            "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:045984464920:certificate/2d81bfca-89ea-42cb-8e78-ea9c3d1f6919",
             "TAGS": {"CostCenter": "NO PROGRAM / 000000"},
         }
     case "dev":
         environment_variables = {
             "VPC_CIDR": "10.254.120.0/24",
             "FQDN": "dev.bixarena.io",
-            "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:864020296088:certificate/2d1a68ac-8601-4877-8b97-6e58d0ebf532",
+            "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:864020296088:certificate/d82cd9ec-2106-4293-9232-62af18bb6295",
             "TAGS": {"CostCenter": "NO PROGRAM / 000000"},
         }
     case _:
