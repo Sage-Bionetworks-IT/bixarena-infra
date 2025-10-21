@@ -127,7 +127,7 @@ api_gateway_stack = ServiceStack(
     construct_id=f"{stack_name_prefix}-api-gateway",
     vpc=network_stack.vpc,
     cluster=ecs_stack.cluster,
-    props=ai_service_props,
+    props=api_gateway_props,
 )
 api_gateway_stack.add_dependency(api_stack)
 api_gateway_stack.add_dependency(ai_service_stack)
@@ -151,7 +151,7 @@ app_props = ServiceProps(
     container_env_vars={
         "APP_PORT": "8100",
         "ENVIRONMENT": "development",
-        "API_BASE_URL": f"https://{fully_qualified_domain_name}:8112/v1",
+        "API_BASE_URL": f"https://{fully_qualified_domain_name}/v1",
         "OIDC_BASE_URL": "http://127.0.0.1:8112/v1",
         "OPENAI_API_KEY": "changeme",
     },
