@@ -29,7 +29,7 @@ class DatabaseStack(cdk.Stack):
             self,
             "PostgresDatabase",
             engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_15_4
+                version=rds.PostgresEngineVersion.VER_16_9
             ),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.SMALL
@@ -41,4 +41,5 @@ class DatabaseStack(cdk.Stack):
             storage_encrypted=True,
             backup_retention=cdk.Duration.days(7),
             deletion_protection=False,
+            database_name="bixarena",
         )
