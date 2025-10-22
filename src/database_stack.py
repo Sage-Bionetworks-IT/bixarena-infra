@@ -32,7 +32,7 @@ class DatabaseStack(cdk.Stack):
                 version=rds.PostgresEngineVersion.VER_16_9
             ),
             instance_type=ec2.InstanceType.of(
-                ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.SMALL
+                ec2.InstanceClass.M8G, ec2.InstanceSize.LARGE
             ),
             vpc=vpc,
             credentials=rds.Credentials.from_generated_secret("postgres"),
