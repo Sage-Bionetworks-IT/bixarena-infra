@@ -2,11 +2,12 @@ from os import environ
 
 import aws_cdk as cdk
 
+from src.database_stack import DatabaseStack
 from src.ecs_stack import EcsStack
 from src.load_balancer_stack import LoadBalancerStack
 from src.network_stack import NetworkStack
 from src.service_props import ServiceProps
-from src.service_stack import LoadBalancedServiceStack
+from src.service_stack import LoadBalancedServiceStack, ServiceStack
 
 # get the environment and set environment specific variables
 VALID_ENVIRONMENTS = ["dev", "stage", "prod"]
@@ -39,10 +40,10 @@ match environment:
             f"Must set environment variable `ENV` to one of {valid_envs_str}. Currently set to {environment}."
         )
 
-stack_name_prefix = f"app-{environment}"
+stack_name_prefix = f"bixarena-{environment}"
 fully_qualified_domain_name = environment_variables["FQDN"]
 environment_tags = environment_variables["TAGS"]
-app_version = "latest"
+app_version = "edge"
 
 # Define stacks
 cdk_app = cdk.App()
@@ -52,11 +53,20 @@ if environment_tags:
     for key, value in environment_tags.items():
         cdk.Tags.of(cdk_app).add(key, value)
 
+
 network_stack = NetworkStack(
     scope=cdk_app,
     construct_id=f"{stack_name_prefix}-network",
     vpc_cidr=environment_variables["VPC_CIDR"],
 )
+
+database_stack = DatabaseStack(
+    scope=cdk_app,
+    construct_id=f"{stack_name_prefix}-db",
+    vpc=network_stack.vpc,
+    allocated_storage=50,
+)
+
 
 ecs_stack = EcsStack(
     scope=cdk_app,
@@ -64,6 +74,64 @@ ecs_stack = EcsStack(
     vpc=network_stack.vpc,
     namespace=fully_qualified_domain_name,
 )
+
+api_props = ServiceProps(
+    container_name="bixarena-api",
+    container_location=f"ghcr.io/sage-bionetworks/bixarena-api:{app_version}",
+    container_port=8112,
+    ecs_task_memory=1024,
+)
+api_stack = ServiceStack(
+    scope=cdk_app,
+    construct_id=f"{stack_name_prefix}-api",
+    vpc=network_stack.vpc,
+    cluster=ecs_stack.cluster,
+    props=api_props,
+)
+api_stack.add_dependency(database_stack)
+api_stack.service.connections.allow_to_default_port(
+    database_stack.database,
+    "Allow API container to connect to database",
+)
+
+ai_service_props = ServiceProps(
+    container_name="bixarena-ai-service",
+    container_location=f"ghcr.io/sage-bionetworks/bixarena-ai-service:{app_version}",
+    container_port=8114,
+    container_env_vars={
+        "APP_PORT": "8114",
+    },
+    ecs_task_memory=1024,
+)
+ai_service_stack = ServiceStack(
+    scope=cdk_app,
+    construct_id=f"{stack_name_prefix}-ai-service",
+    vpc=network_stack.vpc,
+    cluster=ecs_stack.cluster,
+    props=ai_service_props,
+)
+ai_service_stack.add_dependency(database_stack)
+ai_service_stack.service.connections.allow_to_default_port(
+    database_stack.database,
+    "Allow AI Service container to connect to database",
+)
+
+api_gateway_props = ServiceProps(
+    container_name="bixarena-api-gateway",
+    container_location=f"ghcr.io/sage-bionetworks/bixarena-api-gateway:{app_version}",
+    container_port=8113,
+    ecs_task_memory=1024,
+)
+api_gateway_stack = ServiceStack(
+    scope=cdk_app,
+    construct_id=f"{stack_name_prefix}-api-gateway",
+    vpc=network_stack.vpc,
+    cluster=ecs_stack.cluster,
+    props=api_gateway_props,
+)
+api_gateway_stack.add_dependency(api_stack)
+api_gateway_stack.add_dependency(ai_service_stack)
+
 
 # From AWS docs https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect-concepts-deploy.html
 # The public discovery and reachability should be created last by AWS CloudFormation, including the frontend
@@ -76,24 +144,48 @@ load_balancer_stack = LoadBalancerStack(
 )
 
 app_props = ServiceProps(
-    ecs_task_cpu=256,
-    ecs_task_memory=512,
-    container_name="my-app",
-    container_location=f"nginx:{app_version}",
-    container_port=80,
+    container_name="bixarena-app",
+    container_location=f"ghcr.io/sage-bionetworks/bixarena-app:{app_version}",
+    container_port=8100,
+    ecs_task_memory=1024,
     container_env_vars={
-        "APP_VERSION": f"{app_version}",
+        "APP_PORT": "8100",
+        "ENVIRONMENT": "development",
+        "API_BASE_URL": f"https://{fully_qualified_domain_name}/v1",
+        "OIDC_BASE_URL": "http://127.0.0.1:8112/v1",
+        "OPENAI_API_KEY": "changeme",
     },
 )
-app_stack = LoadBalancedServiceStack(
+app_stack = ServiceStack(
     scope=cdk_app,
     construct_id=f"{stack_name_prefix}-app",
     vpc=network_stack.vpc,
     cluster=ecs_stack.cluster,
     props=app_props,
+)
+app_stack.add_dependency(api_stack)
+
+apex_props = ServiceProps(
+    container_name="bixarena-apex",
+    container_location=f"ghcr.io/sage-bionetworks/bixarena-apex:{app_version}",
+    container_port=8111,
+    container_env_vars={
+        "API_GATEWAY_HOST": "bixarena-api-gateway",
+        "API_GATEWAY_PORT": "8113",
+        "APP_HOST": "bixarena-app",
+        "APP_PORT": "8100",
+    },
+)
+apex_stack = LoadBalancedServiceStack(
+    scope=cdk_app,
+    construct_id=f"{stack_name_prefix}-apex",
+    vpc=network_stack.vpc,
+    cluster=ecs_stack.cluster,
+    props=apex_props,
     load_balancer=load_balancer_stack.alb,
     certificate_arn=environment_variables["CERTIFICATE_ARN"],
 )
-app_stack.add_dependency(app_stack)
+apex_stack.add_dependency(app_stack)
+apex_stack.add_dependency(api_gateway_stack)
 
 cdk_app.synth()
