@@ -168,7 +168,7 @@ app_stack.add_dependency(api_stack)
 apex_props = ServiceProps(
     container_name="bixarena-apex",
     container_location=f"ghcr.io/sage-bionetworks/bixarena-apex:{app_version}",
-    container_port=80,
+    container_port=8111,
     container_env_vars={
         "API_GATEWAY_HOST": "bixarena-api-gateway",
         "API_GATEWAY_PORT": "8113",
