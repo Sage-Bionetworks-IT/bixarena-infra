@@ -10,28 +10,31 @@ from src.utils import load_context_config
 class TestLoadContextConfig:
     """Test suite for the load_context_config function."""
 
-    def test_invalid_environment_raises_value_error(self):
+    @pytest.mark.parametrize(
+        "invalid_env", ["invalid", "test", "production", "development", ""]
+    )
+    def test_invalid_environment_raises_value_error(self, invalid_env):
         """Test that invalid environment names raise ValueError."""
-        invalid_envs = ["invalid", "test", "production", "development", ""]
+        with pytest.raises(ValueError, match=f"Invalid environment '{invalid_env}'"):
+            load_context_config(invalid_env)
 
-        for env in invalid_envs:
-            with pytest.raises(ValueError, match=f"Invalid environment '{env}'"):
-                load_context_config(env)
-
-    def test_valid_environments(self):
+    @pytest.mark.parametrize("valid_env", ["dev", "stage", "prod"])
+    def test_valid_environments(self, valid_env):
         """Test that valid environment names are accepted."""
-        valid_envs = ["dev", "stage", "prod"]
-
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create a basic config file for each valid environment
-            for env in valid_envs:
-                config_file = Path(temp_dir) / f"{env}.yaml"
-                with open(config_file, "w") as f:
-                    yaml.dump({"test": "value"}, f)
+            config_file = Path(temp_dir) / f"{valid_env}.yaml"
+            config_data = {
+                "FQDN": f"{valid_env}.example.com",
+                "VPC_CIDR": "10.0.0.0/16",
+                "TAGS": {"Environment": valid_env},
+            }
 
-                # Should not raise an exception
-                result = load_context_config(env, temp_dir)
-                assert result == {"test": "value"}
+            with open(config_file, "w") as f:
+                yaml.dump(config_data, f)
+
+            result = load_context_config(valid_env, temp_dir)
+            assert result["FQDN"] == f"{valid_env}.example.com"
+            assert result["TAGS"]["Environment"] == valid_env
 
     def test_no_config_file_raises_file_not_found_error(self):
         """Test that missing config files raise FileNotFoundError."""
@@ -41,64 +44,69 @@ class TestLoadContextConfig:
             ):
                 load_context_config("dev", temp_dir)
 
-    def test_multiple_config_files_raises_value_error(self):
+    @pytest.mark.parametrize(
+        "file_extensions", [(".yaml", ".json"), (".yaml", ".yml"), (".yml", ".json")]
+    )
+    def test_multiple_config_files_raises_value_error(self, file_extensions):
         """Test that multiple config files for same environment raise ValueError."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create multiple config files for the same environment
-            yaml_file = Path(temp_dir) / "dev.yaml"
-            json_file = Path(temp_dir) / "dev.json"
+            ext1, ext2 = file_extensions
+            file1 = Path(temp_dir) / f"dev{ext1}"
+            file2 = Path(temp_dir) / f"dev{ext2}"
 
-            with open(yaml_file, "w") as f:
-                yaml.dump({"test": "yaml"}, f)
+            # Create content based on file extension
+            if ext1 == ".json":
+                with open(file1, "w") as f:
+                    json.dump({"test": "file1"}, f)
+            else:
+                with open(file1, "w") as f:
+                    yaml.dump({"test": "file1"}, f)
 
-            with open(json_file, "w") as f:
-                json.dump({"test": "json"}, f)
+            if ext2 == ".json":
+                with open(file2, "w") as f:
+                    json.dump({"test": "file2"}, f)
+            else:
+                with open(file2, "w") as f:
+                    yaml.dump({"test": "file2"}, f)
 
             with pytest.raises(
                 ValueError, match="Multiple config files found for environment 'dev'"
             ):
                 load_context_config("dev", temp_dir)
 
-    def test_load_yaml_config(self):
-        """Test loading YAML configuration file."""
+    @pytest.mark.parametrize(
+        "file_extension,config_data",
+        [
+            (
+                ".yaml",
+                {
+                    "VPC_CIDR": "10.0.0.0/16",
+                    "FQDN": "example.com",
+                    "TAGS": {"Environment": "dev"},
+                },
+            ),
+            (".yml", {"VPC_CIDR": "10.0.0.0/16", "FQDN": "example.com"}),
+            (
+                ".json",
+                {
+                    "VPC_CIDR": "10.0.0.0/16",
+                    "FQDN": "example.com",
+                    "TAGS": {"Environment": "dev"},
+                },
+            ),
+        ],
+    )
+    def test_load_config_files(self, file_extension, config_data):
+        """Test loading configuration files in different formats."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            config_file = Path(temp_dir) / "dev.yaml"
-            config_data = {
-                "VPC_CIDR": "10.0.0.0/16",
-                "FQDN": "example.com",
-                "TAGS": {"Environment": "dev"},
-            }
+            config_file = Path(temp_dir) / f"dev{file_extension}"
 
-            with open(config_file, "w") as f:
-                yaml.dump(config_data, f)
-
-            result = load_context_config("dev", temp_dir)
-            assert result == config_data
-
-    def test_load_yml_config(self):
-        """Test loading .yml configuration file."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config_file = Path(temp_dir) / "dev.yml"
-            config_data = {"VPC_CIDR": "10.0.0.0/16", "FQDN": "example.com"}
-
-            with open(config_file, "w") as f:
-                yaml.dump(config_data, f)
-
-            result = load_context_config("dev", temp_dir)
-            assert result == config_data
-
-    def test_load_json_config(self):
-        """Test loading JSON configuration file."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config_file = Path(temp_dir) / "dev.json"
-            config_data = {
-                "VPC_CIDR": "10.0.0.0/16",
-                "FQDN": "example.com",
-                "TAGS": {"Environment": "dev"},
-            }
-
-            with open(config_file, "w") as f:
-                json.dump(config_data, f)
+            if file_extension == ".json":
+                with open(config_file, "w") as f:
+                    json.dump(config_data, f)
+            else:
+                with open(config_file, "w") as f:
+                    yaml.dump(config_data, f)
 
             result = load_context_config("dev", temp_dir)
             assert result == config_data
@@ -199,61 +207,22 @@ class TestLoadContextConfig:
             result = load_context_config("dev", str(custom_dir))
             assert result == config_data
 
-    def test_yaml_precedence_over_yml(self):
-        """Test that when both .yaml and .yml exist, an error is raised."""
+    @pytest.mark.parametrize(
+        "file_extension,invalid_content,expected_exception",
+        [
+            (".yaml", "invalid: yaml: content: [unclosed", yaml.YAMLError),
+            (".yml", "invalid: yaml: content: [unclosed", yaml.YAMLError),
+            (".json", '{"invalid": json content}', json.JSONDecodeError),
+        ],
+    )
+    def test_invalid_config_content(
+        self, file_extension, invalid_content, expected_exception
+    ):
+        """Test handling of invalid configuration file content."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # This test ensures our error handling works - we should get an error
-            # when both .yaml and .yml exist
-            yaml_file = Path(temp_dir) / "dev.yaml"
-            yml_file = Path(temp_dir) / "dev.yml"
-
-            with open(yaml_file, "w") as f:
-                yaml.dump({"source": "yaml"}, f)
-
-            with open(yml_file, "w") as f:
-                yaml.dump({"source": "yml"}, f)
-
-            with pytest.raises(ValueError, match="Multiple config files found"):
-                load_context_config("dev", temp_dir)
-
-    def test_all_environments_work(self):
-        """Test that all valid environments work correctly."""
-        environments = ["dev", "stage", "prod"]
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            for env in environments:
-                config_file = Path(temp_dir) / f"{env}.yaml"
-                config_data = {
-                    "FQDN": f"{env}.example.com",
-                    "VPC_CIDR": "10.0.0.0/16",
-                    "TAGS": {"Environment": env},
-                }
-
-                with open(config_file, "w") as f:
-                    yaml.dump(config_data, f)
-
-                result = load_context_config(env, temp_dir)
-                assert result["FQDN"] == f"{env}.example.com"
-                assert result["TAGS"]["Environment"] == env
-
-    def test_invalid_yaml_content(self):
-        """Test handling of invalid YAML content."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config_file = Path(temp_dir) / "dev.yaml"
-            # Create invalid YAML content
+            config_file = Path(temp_dir) / f"dev{file_extension}"
             with open(config_file, "w") as f:
-                f.write("invalid: yaml: content: [unclosed")
+                f.write(invalid_content)
 
-            with pytest.raises(yaml.YAMLError):
-                load_context_config("dev", temp_dir)
-
-    def test_invalid_json_content(self):
-        """Test handling of invalid JSON content."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config_file = Path(temp_dir) / "dev.json"
-            # Create invalid JSON content
-            with open(config_file, "w") as f:
-                f.write('{"invalid": json content}')
-
-            with pytest.raises(json.JSONDecodeError):
+            with pytest.raises(expected_exception):
                 load_context_config("dev", temp_dir)
