@@ -1,0 +1,4 @@
+VPC_CIDR: 10.254.121.0/24
+FQDN: stage.bixarena.ai
+CERTIFICATE_ARN: >-
+  arn:aws:acm:us-east-1:045984464920:certificate/2d81bfca-89ea-42cb-8e78-ea9c3d1f6919

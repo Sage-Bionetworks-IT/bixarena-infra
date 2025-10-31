@@ -50,6 +50,4 @@ jobs:
           role-session-name: ${{ inputs.role-session-name }}
           role-duration-seconds: ${{ inputs.role-duration-seconds }}
       - name: CDK deploy
-        run: cdk deploy --all --debug --concurrency 5 --require-approval never
-        env:
-          ENV: ${{ inputs.environment }}
+        run: cdk deploy --context env=${{ inputs.environment }} --all --debug --concurrency 5 --require-approval never

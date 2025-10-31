@@ -86,7 +86,7 @@ execute the validations by running `pre-commit run --all-files`.
 Verify CDK to Cloudformation conversion by running [cdk synth]:
 
 ```console
-ENV=dev cdk synth
+cdk synth --context env=dev
 ```
 
 The Cloudformation output is saved to the `cdk.out` folder
@@ -102,38 +102,33 @@ python -m pytest tests/ -s -v
 
 ## Environments
 
-An `ENV` environment variable must be set when running the `cdk` command tell the
-CDK which environment's variables to use when synthesising or deploying the stacks.
+When running `cdk` commands, you must specify which environment's
+configuration to use.  This is done by passing a context variable to
+CDK, which loads environment-specific parameters.
 
-Set environment variables for each environment in the [app.py](./app.py) file:
+Create a configuration file in the [config](./config) folder for each environment
+(e.g., `dev.yaml`, `prod.yaml`).  Both yaml and json files are supported.
+The supported environments are dev, stage, and prod.
 
-```python
-environment_variables = {
-    "VPC_CIDR": "10.254.192.0/24",
-    "FQDN": "dev.app.io",
-    "CERTIFICATE_ARN": "arn:aws:acm:us-east-1:XXXXXXXXXXX:certificate/0e9682f6-3ffa-46fb-9671-b6349f5164d6",
-    "TAGS": {"CostCenter": "NO PROGRAM / 000000"},
-}
-```
-
-For example, synthesis with the `prod` environment variables:
+To synthesize or deploy using the `prod` environment configuration:
 
 ```console
-ENV=prod cdk synth
+cdk synth --context env=prod
 ```
 
+There is also an optional `base` configuration file that is always loaded
+and merged with one of the passed in environment configuration.
+
+The values from the environment-specific configuration file will
+override those in the base configuration file if there are conflicts.
+For example, if both files define `TAGS`, the value from `dev.yaml`
+will take precedence.
+
+
 > [!NOTE]
-> The `VPC_CIDR` must be a unique value within our AWS organization. Check our
-> [wiki](https://sagebionetworks.jira.com/wiki/spaces/IT/pages/2850586648/Setup+AWS+VPC)
-> for information on how to obtain a unique CIDR
-
-## Certificates
-
-Certificates to set up HTTPS connections should be created manually in AWS certificate manager.
-This is not automated due to AWS requiring manual verification of the domain ownership.
-Once created take the ARN of the certificate and set that ARN in environment_variables.
-
-![ACM certificate](docs/acm-certificate.png)
+> Ensure that `VPC_CIDR` is unique within your AWS organization.
+Refer to our [guidance](https://sagebionetworks.jira.com/wiki/spaces/IT/pages/2850586648/Setup+AWS+VPC)
+on selecting a unique CIDR block.
 
 ## Secrets
 
@@ -299,7 +294,7 @@ Deployment requires setting up an [AWS profile](https://docs.aws.amazon.com/cli/
 then executing the following command:
 
 ```console
-AWS_PROFILE=itsandbox-dev AWS_DEFAULT_REGION=us-east-1 ENV=dev cdk deploy --all
+AWS_PROFILE=itsandbox-dev AWS_DEFAULT_REGION=us-east-1 cdk deploy --context env=dev --all
 ```
 
 ## Force new deployment

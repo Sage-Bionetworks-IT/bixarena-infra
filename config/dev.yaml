@@ -1,0 +1,4 @@
+VPC_CIDR: 10.254.120.0/24
+FQDN: dev.bixarena.ai
+CERTIFICATE_ARN: >-
+  arn:aws:acm:us-east-1:864020296088:certificate/d82cd9ec-2106-4293-9232-62af18bb6295
