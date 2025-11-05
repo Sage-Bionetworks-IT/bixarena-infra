@@ -32,6 +32,4 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Generate cloudformation
-        env:
-          ENV: ${{ inputs.environment }}
-        run: cdk synth --debug --output ./cdk.out
+        run: cdk synth --context env=${{ inputs.environment }} --debug --output ./cdk.out
